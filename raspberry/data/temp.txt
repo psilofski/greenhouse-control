@@ -1,0 +1,4 @@
+select database:
+[0]calendar.db
+[1]logger.db
+Choose db: 

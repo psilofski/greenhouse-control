@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <title>GreenHouse Monitoring v2.0b</title>
+  <meta HTTP-EQUIV='CONTENT-TYPE' CONTENT='text/html' charset='UTF-8'>
+  <script type="text/javascript" src="../lib/jquery-1.9.1.min.js"></script>
+<!--  <script type="text/javascript" src="../lib/jquery.xdomainajax.js"></script>-->
+
+
+ <SCRIPT language="JavaScript">
+   $(document).ready(function () {
+//       $('#mainTitle').css('background', '#FFF')
+//       $('#mainTitle').text('GreenHouse Monitoring v1.0')
+
+//       $.ajax({
+//           url: loggerAddr,
+//           type: 'GET',
+//           success: function(res) {
+//              var content = $(res.responseText).text();
+//              alert(content);
+//           }
+//       });
+       function fetchdbdata(fora) {
+            post = '?pg='+ (parseInt(page) + fora) + '&step=' + $('#step').val()
+console.log (         dbdataAddr + post)   
+            $dbdata.load(dbdataAddr + post, function () {
+                uptodate = $dbdata.find('uptodate').text()
+                page = $dbdata.find('page').text()
+				step = $dbdata.find('step').text()
+
+                Tday = $dbdata.find('Tday').text()
+                ADT = $dbdata.find('ADT').text()
+                DIF = $dbdata.find('DIF').text()
+                CAB = $dbdata.find('CAB').text()
+	
+				$('#Tstats').text('Tday: '+Tday+' | ADT: '+ADT+' | DIF: '+DIF+' | CAB:'+CAB) 
+                $('#untilday').text(uptodate)
+                $('img#plot2').attr('src', './data/Temperatures.png?' + new Date().getTime()) //Change request to ignore cache
+//                document.getElementById('plot').src = '../data/Tout_Tin_t.png'
+            })
+       }
+        
+       dbdataAddr = "./saveplot.py"
+       page = 1  // for initial load
+       $dbdata = $('div#dbdata')
+//       fetchdbdata(0) // first fetch
+	   $('img#plot1').attr('src', './data/Ttoday.png?' + new Date().getTime())
+       setInterval(function(){
+//        fetchdbdata(0) // continuous fetch
+	      $('img#plot1').attr('src', './data/Ttoday.png?' + new Date().getTime())
+       },240000);
+       
+       $('#previus').on('click', function () {
+            fetchdbdata(1)
+       })
+       $('#next').on('click', function () {
+            fetchdbdata(-1)
+       })
+       
+       $('#untilday').on('click', function () {
+            fetchdbdata(0)
+       })
+       
+       // load logger data
+       loggerAddr = "http://192.168.1.201:90/"
+       $('div#loggerContainer').load('./grabber.py?url=' + loggerAddr)
+       var intervalLogger = setInterval(function(){
+        $('div#loggerContainer').load('./grabber.py?url=' + loggerAddr)
+       },10000);
+       
+       $('button#gotologger').click(function() {
+         window.open(loggerAddr)
+       })
+       
+       mydns = "http://klery.zapto.org"
+       ipcamVisit = mydns + ":8079/"
+       ipcamAddr = ipcamVisit + "snapshot.cgi?user=gardener&pwd=peekaboo&resolution=8"
+       ipcam2 = mydns + ":8080/"
+
+       var intervalCam = setInterval(function(){
+           $('div#ipcamContainer img').attr('src', ipcamAddr)
+       },1000);
+
+       $('button#gotoCam2').click(function() {
+        window.open(ipcam2); 
+       })
+       $('button#gotoCam').click(function() {
+        clearInterval(intervalCam);
+        window.open(ipcamVisit);
+       })
+       $('button#stopCam').click(function() {
+        clearInterval(intervalCam);
+       })
+       $('button#playCam').click(function() {
+        clearInterval(intervalCam);
+        intervalCam = setInterval(function(){
+           $('div#ipcamContainer img').attr('src', ipcamAddr)
+        },1000);
+       })
+       //$('div#ipcamContainer').load(ipcamAddr)
+       
+   
+       // Registering Notes (calendar) data
+       var today = new Date();
+       var dd = today.getDate();
+       var mm = today.getMonth()+1; //January is 0!
+       var yyyy = today.getFullYear();
+       if(dd<10){dd='0'+dd} if(mm<10){mm='0'+mm} today = dd+'/'+mm+'/'+yyyy;
+       $('#dateask').attr('value', today)
+    //   document.getElementById("dateask").value = today;
+       $('button#toggleNotes').click(function() {
+        $('div#notesContainer').toggle();
+       })
+        
+       //Reading Notes (calendar) data
+       $('div#notesDBread').load('./notesDBread.py')
+
+        $('#submitBut').click(function() {
+        // Get all of the values from the input fields thru their ID's
+           var regDate = $("#dateask").val();
+           var subject = $("#subjtext").val();
+           var comments = $("#textbox").val();
+           var regColor = $("#notescolor").val();
+            $.ajax({
+              url: "register.py",
+              type: "POST",
+              data: ({
+                   regDate: regDate,
+                   subject: subject,
+                   comments: comments,
+                   regColor: regColor
+               }),
+              success: function(data) 
+              {
+              $('div#notesDBread').load('./notesDBread.py')
+              }
+            });  
+        });    
+       
+   })   //document.ready
+   
+  </script>
+
+    <style type="text/css">
+      div.btnBar button {float:left; margin:0px;}
+    </style>
+    
+ </head>
+
+
+ <body>
+ 
+<!--  <h3 id="mainTitle"></h3> -->
+ 
+  <div style="display:inline-block; position:absolute;left:100px;top:0px;">
+    <div id="ipcamContainer">
+        <img style="-webkit-user-select: none" />
+    </div> 
+    <div class="btnBar" style="z-index:100; position:absolute; left:0px; bottom:0px; " >  
+		<button id="gotoCam2">2</button>
+        <button id="gotoCam">@</button>  
+        <button id="stopCam">&#9679;</button> 
+        <button id="playCam">&raquo;</button> 
+    </div>
+  </div>    
+  
+  <div style="display:inline-block; position:absolute; left:430px; top:30px;">
+  <div style="display:inline-block; padding:5px; border:4px outset green; background:silver;" id="loggerContainer">
+  </div>
+  <button style="z-index:100;position:absolute; top:-15px; left:0px; " id="gotologger">@</button>
+  </div>
+  
+  <div style="display:inline-block;position:absolute;left:0px;top:230px;z-index:50">
+    <img id="plot1" />
+	<div class="btnBar" id="nav" style="margin-left:auto; margin-right:auto; width:250px;">
+		<input type="number" id="step"
+		   min="1"
+		   step="1"
+		   max="99"
+		   value="2">
+		</input>
+		<button id="previus">&larr;</button>
+		<button id="untilday">Today</button>
+		<button id="next">&rarr;</button>
+	</div>
+	<p id="Tstats"></p>
+    <img id="plot2" />
+  </div>
+  
+   <div id="dbdata" style="display: hidden;">
+  </div> 
+
+
+<!-- Registering calendar data -->  
+  <button id="toggleNotes">Notes &rsaquo;</button>
+  <div id="notesContainer" style="background:#E0FFFF; display:none; position:absolute;z-index:500;">
+    <div id="notesWrite" style="width:200px;">
+ <!--       <form enctype="multipart/form-data" method="post">	--> 	
+            <label for="regDate">Date:</label>
+            <input type="text" name="regDate" id="dateask"></input>		
+            <label for="subject">Subj:</label>
+            <input type="text" name="subject" id="subjtext"></input>
+            <textarea rows="7" cols="21" name="comments" id="textbox"></textarea>
+            <select name="regColor" id="notescolor">
+              <option style="color:blue;" value="blue">Blue</option>
+              <option style="color:green;" value="green">Green</option>
+              <option style="color:red;" value="red">Red</option>
+              <option style="color:yellow;" value="yellow">Yellow</option>
+              <option style="color:black;" value="black">Black</option>
+            </select>
+            <input id="submitBut" type="submit" value="Post It!" />
+        
+<!--        </form> --> 
+    </div>
+    <div id="notesDBread" style="border:1px outset black; width:500px; overflow-y:auto;">
+    </div>
+    
+  </div>
+  
+  
+</body>
+
+  
+ 
+
+
